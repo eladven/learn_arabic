@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>תרגול ערבית – זיהוי אותיות ותעתיק</title>
+  <style>
+    :root { font-family: system-ui, Arial, sans-serif; }
+    body { margin: 0; background: #f6f7fb; color: #111; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .card {
+      background: white; border-radius: 16px; padding: 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.07);
+      margin-bottom: 14px;
+    }
+    h1 { margin: 0 0 10px; font-size: 26px; }
+    h2 { margin: 0 0 10px; font-size: 18px; }
+    p, li { line-height: 1.55; }
+    .muted { color: #566; font-size: 14px; }
+    .note { background: #fff7d6; border: 1px solid #ffe08a; padding: 10px 12px; border-radius: 12px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #edf0f7; padding: 10px; text-align: right; vertical-align: top; }
+    th { background: #fafbff; font-size: 13px; color: #334; white-space: nowrap; }
+    .ar { font-size: 22px; font-weight: 900; direction: rtl; }
+    .shape { font-size: 22px; font-weight: 900; direction: rtl; }
+    .he { font-weight: 800; }
+
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .grow { flex: 1 1 300px; }
+    .arabicWord {
+      font-size: 46px; font-weight: 900;
+      direction: rtl; text-align: center;
+      padding: 18px 10px; border-radius: 14px;
+      background: #f0f5ff; border: 1px solid #d7e3ff;
+      margin-top: 10px;
+    }
+    label { display: block; margin: 8px 0 6px; font-weight: 800; }
+    input[type="text"]{
+      width: 100%; font-size: 18px; padding: 12px 12px;
+      border-radius: 12px; border: 1px solid #d6d8df; outline: none;
+    }
+    input[type="text"]:focus{ border-color:#6b8cff; box-shadow: 0 0 0 3px rgba(107,140,255,0.18); }
+    button{
+      border: none; border-radius: 12px; padding: 10px 14px;
+      font-size: 16px; cursor: pointer;
+      background: #2f6bff; color: #fff;
+    }
+    button.secondary { background: #e9eefc; color: #123; }
+    button:disabled{ opacity: .55; cursor: not-allowed; }
+
+    .feedback { margin-top: 12px; padding: 12px; border-radius: 12px; border: 1px solid #d6d8df; background: #fafbff; }
+    .ok { border-color:#bfe7c3; background:#f0fff2; }
+    .bad { border-color:#ffced0; background:#fff2f2; }
+
+    .breakdownBox{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px dashed #c9d1ff;
+      background: #f7f8ff;
+    }
+    .breakdownTitle{ font-weight: 900; margin-bottom: 8px; }
+    .lettersRow{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: stretch;
+    }
+    .letterCard{
+      border: 1px solid #e2e6ff;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 8px 10px;
+      min-width: 150px;
+    }
+    .letterAr{ font-size: 20px; font-weight: 900; direction: rtl; }
+    .letterHe{ margin-top: 2px; font-weight: 900; }
+    .letterNote{ margin-top: 4px; font-size: 13px; color:#556; }
+    .unknown{ border-style: dashed; opacity: 0.9; }
+
+    .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; }
+    .pill.ok { background:#e9fff0; border:1px solid #bfe7c3; }
+    .pill.bad{ background:#fff0f0; border:1px solid #ffced0; }
+
+    .footer { text-align:center; padding: 10px 0 30px; color:#667; font-size: 13px; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1 id="pageTitle">תרגול ערבית – זיהוי אותיות ותעתיק לעברית</h1>
+      <div id="intro"></div>
+      <p class="muted" id="howMany"></p>
+    </div>
+
+    <div class="card">
+      <h2>טבלת אותיות בסילבוס</h2>
+      <p class="muted">עורכים את שמות האותיות והצורות בקובץ <b>content.js</b>.</p>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>אות</th>
+              <th>תעתיק</th>
+              <th>שם האות (בתעתיק)</th>
+              <th>אות נפרדת</th>
+              <th>תחילת מילה</th>
+              <th>אמצע מילה</th>
+              <th>סוף מילה</th>
+            </tr>
+          </thead>
+          <tbody id="lettersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" id="quizCard">
+      <div class="row">
+        <div class="grow">
+          <h2 id="qTitle">שאלה 1 מתוך 5</h2>
+          <div class="arabicWord" id="arabicWord">...</div>
+        </div>
+        <div class="grow">
+          <label for="answer">כתוב/כתבי תעתיק לעברית (בלי תרגום):</label>
+          <input id="answer" type="text" autocomplete="off" placeholder="למשל: אנא" />
+          <div class="row" style="margin-top:10px;">
+            <button id="submitBtn">בדיקה</button>
+            <button id="nextBtn" class="secondary" disabled>שאלה הבאה</button>
+            <button id="restartBtn" class="secondary" style="margin-inline-start:auto;">התחל סשן חדש (אקראי)</button>
+          </div>
+          <div class="muted" style="margin-top:8px;">טיפ: Enter לבדיקה.</div>
+        </div>
+      </div>
+      <div id="feedback" class="feedback" style="display:none;"></div>
+    </div>
+
+    <div class="card" id="resultsCard" style="display:none;">
+      <h2>סיכום תוצאות</h2>
+      <p id="scoreLine" class="muted"></p>
+      <table>
+        <thead>
+          <tr>
+            <th>מילה בערבית</th>
+            <th>התשובה שלך</th>
+            <th>תשובה נכונה</th>
+            <th>סטטוס</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+      <div class="row" style="margin-top:12px;">
+        <button id="restartBtn2" class="secondary">סשן חדש (עוד 5 אקראיות)</button>
+      </div>
+    </div>
+
+    <div class="footer">בהצלחה במבחן! 🌟</div>
+  </div>
+
+  <script src="./content.js"></script>
+
+  <script>
+    if (!window.AR_LEARNING_CONTENT) {
+      alert("לא נמצא content.js או שהוא לא נטען. ודא ששני הקבצים באותה תיקייה.");
+    }
+
+    const { PAGE, LETTERS, QUESTION_BANK, LETTER_MAP_OVERRIDES } = window.AR_LEARNING_CONTENT;
+
+    // ---------- Helpers ----------
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function normalizeHebrew(s) {
+      if (s == null) return "";
+      return String(s)
+        .trim()
+        .replace(/[\s\-–—_,.!"'“”‘’(){}\[\]:;؟،]/g, "")
+        .replace(/ך/g, "כ")
+        .replace(/ם/g, "מ")
+        .replace(/ן/g, "נ")
+        .replace(/ף/g, "פ")
+        .replace(/ץ/g, "צ");
+    }
+
+    // Random pick (no repeats inside the 5)
+    function pickRandomQuestions(bank, k) {
+      const arr = bank.slice();
+      // Fisher-Yates shuffle
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr.slice(0, k);
+    }
+
+    // Split Arabic word into "units": keep diacritics attached to previous letter
+    function splitArabicUnits(word) {
+      const units = [];
+      for (let i = 0; i < word.length; i++) {
+        const ch = word[i];
+        // Arabic diacritics 064B-065F, 0670
+        if (/[\u064B-\u065F\u0670]/.test(ch)) {
+          if (units.length === 0) units.push(ch);
+          else units[units.length - 1] += ch;
+          continue;
+        }
+        units.push(ch);
+      }
+      return units;
+    }
+
+    // ---------- Build letter lookup for breakdown ----------
+    const letterMap = new Map();
+    for (const l of LETTERS) letterMap.set(l.ar, { translit: l.translit, note: l.note || "" });
+
+    if (LETTER_MAP_OVERRIDES) {
+      for (const [k, v] of Object.entries(LETTER_MAP_OVERRIDES)) letterMap.set(k, v);
+    }
+
+    function lookupUnit(unit) {
+      if (letterMap.has(unit)) return { key: unit, ...letterMap.get(unit), known: true };
+      const base = unit.replace(/[\u064B-\u065F\u0670]/g, "");
+      if (letterMap.has(base)) return { key: base, ...letterMap.get(base), known: true, shown: unit };
+      return { key: unit, translit: "?", note: "לא ברשימת האותיות בקובץ content.js", known: false };
+    }
+
+    function buildBreakdownHtml(arWord) {
+      const units = splitArabicUnits(arWord);
+      const parts = units.map(u => lookupUnit(u));
+
+      const cards = parts.map(p => {
+        const shownAr = p.shown || p.key;
+        const cls = p.known ? "" : "unknown";
+        const note = p.note ? `<div class="letterNote">${escapeHtml(p.note)}</div>` : "";
+        return `
+          <div class="letterCard ${cls}">
+            <div class="letterAr">${escapeHtml(shownAr)}</div>
+            <div class="letterHe">→ ${escapeHtml(p.translit)}</div>
+            ${note}
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="breakdownBox">
+          <div class="breakdownTitle">פירוק המילה לאותיות + תעתיק לכל אות:</div>
+          <div class="lettersRow">${cards}</div>
+        </div>
+      `;
+    }
+
+    // ---------- Fill header text ----------
+    document.getElementById("pageTitle").textContent = PAGE.title;
+    document.getElementById("intro").innerHTML = PAGE.introHtml;
+    document.getElementById("howMany").textContent =
+      `בכל סשן יש 5 שאלות אקראיות מתוך מאגר של ${QUESTION_BANK.length} מילים (ללא חזרות במאגר).`;
+
+    // ---------- Build letters table (NO explanation column) ----------
+    const lettersBody = document.getElementById("lettersBody");
+    lettersBody.innerHTML = "";
+    for (const item of LETTERS) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="ar">${escapeHtml(item.ar)}</td>
+        <td class="he">${escapeHtml(item.translit)}</td>
+        <td class="he">${escapeHtml(item.name || "")}</td>
+        <td class="shape">${escapeHtml(item.forms?.isolated || item.ar)}</td>
+        <td class="shape">${escapeHtml(item.forms?.initial || "")}</td>
+        <td class="shape">${escapeHtml(item.forms?.medial || "")}</td>
+        <td class="shape">${escapeHtml(item.forms?.final || "")}</td>
+      `;
+      lettersBody.appendChild(tr);
+    }
+
+    // ---------- Quiz elements ----------
+    const arabicWord = document.getElementById("arabicWord");
+    const qTitle = document.getElementById("qTitle");
+    const answer = document.getElementById("answer");
+    const feedback = document.getElementById("feedback");
+    const submitBtn = document.getElementById("submitBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const restartBtn = document.getElementById("restartBtn");
+
+    const quizCard = document.getElementById("quizCard");
+    const resultsCard = document.getElementById("resultsCard");
+    const resultsBody = document.getElementById("resultsBody");
+    const scoreLine = document.getElementById("scoreLine");
+    const restartBtn2 = document.getElementById("restartBtn2");
+
+    // ---------- Session state (5 random questions) ----------
+    let sessionQuestions = pickRandomQuestions(QUESTION_BANK, 5);
+    let attempts = sessionQuestions.map(() => ({ user: "", correct: false }));
+    let idx = 0;
+    let locked = false;
+
+    function resetSession() {
+      sessionQuestions = pickRandomQuestions(QUESTION_BANK, 5);
+      attempts = sessionQuestions.map(() => ({ user: "", correct: false }));
+      idx = 0;
+      locked = false;
+    }
+
+    function renderQuestion() {
+      const q = sessionQuestions[idx];
+      qTitle.textContent = `שאלה ${idx + 1} מתוך ${sessionQuestions.length}`;
+      arabicWord.textContent = q.ar;
+      answer.value = "";
+      answer.focus();
+
+      feedback.style.display = "none";
+      feedback.className = "feedback";
+      feedback.textContent = "";
+
+      locked = false;
+      submitBtn.disabled = false;
+      nextBtn.disabled = true;
+      nextBtn.textContent = (idx === sessionQuestions.length - 1) ? "לסיכום תוצאות" : "שאלה הבאה";
+    }
+
+    function showFeedback(isCorrect, userText, correctText, arWord) {
+      feedback.style.display = "block";
+      feedback.classList.add(isCorrect ? "ok" : "bad");
+
+      if (isCorrect) {
+        feedback.innerHTML = `✅ נכון! כתבת <b>${escapeHtml(userText || "(ריק)")}</b>.`;
+        return;
+      }
+
+      const breakdown = buildBreakdownHtml(arWord);
+      feedback.innerHTML = `
+        ❌ לא בדיוק.<br/>
+        <div style="margin-top:6px;">
+          <div><b>התשובה שלך:</b> ${escapeHtml(userText || "(ריק)")}</div>
+          <div><b>הנכון:</b> ${escapeHtml(correctText)}</div>
+        </div>
+        ${breakdown}
+      `;
+    }
+
+    function gradeCurrent() {
+      if (locked) return;
+      locked = true;
+
+      const q = sessionQuestions[idx];
+      const userText = answer.value;
+      const ok = normalizeHebrew(userText) === normalizeHebrew(q.he);
+
+      attempts[idx] = { user: userText, correct: ok };
+
+      showFeedback(ok, userText, q.he, q.ar);
+      submitBtn.disabled = true;
+      nextBtn.disabled = false;
+    }
+
+    function showResults() {
+      quizCard.style.display = "none";
+      resultsCard.style.display = "block";
+
+      const total = sessionQuestions.length;
+      const correctCount = attempts.filter(a => a.correct).length;
+      scoreLine.innerHTML = `הצלחת <b>${correctCount}</b> מתוך <b>${total}</b>.`;
+
+      resultsBody.innerHTML = "";
+      for (let i = 0; i < total; i++) {
+        const q = sessionQuestions[i];
+        const a = attempts[i];
+        const status = a.correct
+          ? `<span class="pill ok">נכון</span>`
+          : `<span class="pill bad">טעות</span>`;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="font-size:20px; direction:rtl;">${escapeHtml(q.ar)}</td>
+          <td>${escapeHtml(a.user || "")}</td>
+          <td><b>${escapeHtml(q.he)}</b></td>
+          <td>${status}</td>
+        `;
+        resultsBody.appendChild(tr);
+      }
+    }
+
+    function restart() {
+      resetSession();
+      resultsCard.style.display = "none";
+      quizCard.style.display = "block";
+      renderQuestion();
+    }
+
+    // Events
+    submitBtn.addEventListener("click", gradeCurrent);
+
+    nextBtn.addEventListener("click", () => {
+      if (!locked) return;
+      if (idx === sessionQuestions.length - 1) showResults();
+      else { idx++; renderQuestion(); }
+    });
+
+    restartBtn.addEventListener("click", restart);
+    restartBtn2.addEventListener("click", restart);
+
+    answer.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (!locked) gradeCurrent();
+        else if (!nextBtn.disabled) nextBtn.click();
+      }
+    });
+
+    // Init
+    renderQuestion();
+  </script>
+</body>
+</html>
