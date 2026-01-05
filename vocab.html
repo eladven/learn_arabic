@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>תרגול אוצר מילים – ערבית</title>
+  <style>
+    :root { font-family: system-ui, Arial, sans-serif; }
+    body { margin: 0; background: #f6f7fb; color: #111; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .card {
+      background: white; border-radius: 16px; padding: 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.07);
+      margin-bottom: 14px;
+    }
+    h1 { margin: 0 0 10px; font-size: 26px; }
+    h2 { margin: 0 0 10px; font-size: 18px; }
+    p { line-height: 1.55; }
+    .muted { color:#566; font-size: 14px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #edf0f7; padding: 10px; text-align: right; vertical-align: top; }
+    th { background: #fafbff; font-size: 13px; color: #334; white-space: nowrap; }
+
+    .ar { font-size: 22px; font-weight: 900; direction: rtl; }
+    .letters { font-size: 18px; font-weight: 700; direction: rtl; color:#223; }
+    .translit { font-weight: 800; }
+    .meaning { font-weight: 700; }
+
+    button{
+      border: none; border-radius: 12px; padding: 10px 14px;
+      font-size: 16px; cursor: pointer;
+      background: #2f6bff; color: #fff;
+    }
+    button.secondary { background: #e9eefc; color: #123; }
+    button:disabled{ opacity: .55; cursor: not-allowed; }
+
+    input[type="text"]{
+      width: 100%; font-size: 16px; padding: 10px 10px;
+      border-radius: 12px; border: 1px solid #d6d8df; outline: none;
+    }
+    input[type="text"]:focus{ border-color:#6b8cff; box-shadow: 0 0 0 3px rgba(107,140,255,0.18); }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .pill { display:inline-block; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+    .ok { background:#e9fff0; border:1px solid #bfe7c3; }
+    .bad{ background:#fff0f0; border:1px solid #ffced0; }
+
+    .footer { text-align:center; padding: 10px 0 30px; color:#667; font-size: 13px; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>תרגול אוצר מילים – ערבית</h1>
+      <p class="muted">
+        יש כאן שני מצבים:
+        <b>טבלת לימוד</b> (מילים + תעתיק + פירוש) ואז <b>בחינה</b> שבה כותבים רק את הפירוש בעברית.
+      </p>
+      <div class="row">
+        <button id="startExamBtn">התחל בחינה</button>
+        <button id="backToStudyBtn" class="secondary" style="display:none;">חזרה לטבלת הלימוד</button>
+        <button id="finishBtn" class="secondary" style="display:none;">סיימתי</button>
+      </div>
+    </div>
+
+    <!-- STUDY VIEW -->
+    <div class="card" id="studyView">
+      <h2>טבלת לימוד</h2>
+      <p class="muted">המילים נטענות מ־<b>content.js</b> (AR_LEARNING_CONTENT.VOCAB).</p>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>מילה בערבית</th>
+              <th>חלוקה לאותיות</th>
+              <th>תעתיק</th>
+              <th>פירוש בעברית</th>
+            </tr>
+          </thead>
+          <tbody id="studyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- EXAM VIEW -->
+    <div class="card" id="examView" style="display:none;">
+      <h2>בחינה – כתבו רק את הפירוש בעברית</h2>
+      <p class="muted">
+        כתבו לכל מילה את הפירוש בעברית. בסוף לחצו <b>סיימתי</b> לקבלת בדיקה.
+      </p>
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:180px;">מילה בערבית</th>
+              <th>הפירוש שלך בעברית</th>
+              <th style="width:220px;">תוצאה</th>
+            </tr>
+          </thead>
+          <tbody id="examBody"></tbody>
+        </table>
+      </div>
+      <p id="scoreLine" class="muted" style="margin-top:12px;"></p>
+    </div>
+
+    <div class="footer">בהצלחה! 🌟</div>
+  </div>
+
+  <!-- משתמשים באותו content.js -->
+  <script src="./content.js"></script>
+
+  <script>
+    if (!window.AR_LEARNING_CONTENT || !window.AR_LEARNING_CONTENT.VOCAB) {
+      alert("VOCAB לא נמצא ב-content.js. ודא שהוספת AR_LEARNING_CONTENT.VOCAB וששני הקבצים באותה תיקייה.");
+    }
+
+    const VOCAB = window.AR_LEARNING_CONTENT.VOCAB;
+
+    const studyView = document.getElementById("studyView");
+    const examView = document.getElementById("examView");
+    const studyBody = document.getElementById("studyBody");
+    const examBody = document.getElementById("examBody");
+
+    const startExamBtn = document.getElementById("startExamBtn");
+    const backToStudyBtn = document.getElementById("backToStudyBtn");
+    const finishBtn = document.getElementById("finishBtn");
+    const scoreLine = document.getElementById("scoreLine");
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // חלוקה לאותיות (שומרת ניקוד צמוד לאות הקודמת אם קיים)
+    function splitArabicLetters(word) {
+      const units = [];
+      for (let i = 0; i < word.length; i++) {
+        const ch = word[i];
+        // Arabic diacritics 064B-065F, 0670
+        if (/[\u064B-\u065F\u0670]/.test(ch)) {
+          if (units.length === 0) units.push(ch);
+          else units[units.length - 1] += ch;
+          continue;
+        }
+        units.push(ch);
+      }
+      return units.join(" · ");
+    }
+
+    // נירמול תשובות בעברית (לסבילות קלה: רווחים/פיסוק)
+    function normHe(s) {
+      return String(s ?? "")
+        .trim()
+        .replace(/[\s\-–—_,.!"'“”‘’(){}\[\]:;؟،]/g, "");
+    }
+
+    function renderStudy() {
+      studyBody.innerHTML = "";
+      for (const item of VOCAB) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="ar">${escapeHtml(item.ar)}</td>
+          <td class="letters">${escapeHtml(splitArabicLetters(item.ar))}</td>
+          <td class="translit">${escapeHtml(item.translit)}</td>
+          <td class="meaning">${escapeHtml(item.meaning)}</td>
+        `;
+        studyBody.appendChild(tr);
+      }
+    }
+
+    function shuffledIndices(n) {
+	const idxs = Array.from({ length: n }, (_, i) => i);
+	for (let i = n - 1; i > 0; i--) {
+	    const j = Math.floor(Math.random() * (i + 1));
+	    [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+	}
+	return idxs;
+    }
+
+    let examOrder = [];
+
+    function renderExam() {
+	examBody.innerHTML = "";
+	scoreLine.textContent = "";
+
+	examOrder = shuffledIndices(VOCAB.length);
+
+	examOrder.forEach((vocabIndex, rowIndex) => {
+	    const item = VOCAB[vocabIndex];
+
+	    const tr = document.createElement("tr");
+	    tr.innerHTML = `
+      <td class="ar">${escapeHtml(item.ar)}</td>
+      <td>
+        <input type="text" id="ans_${rowIndex}" placeholder="כתוב/כתבי פירוש בעברית" />
+      </td>
+      <td id="res_${rowIndex}" class="muted"></td>
+    `;
+	    examBody.appendChild(tr);
+	});
+
+	const first = document.getElementById("ans_0");
+	if (first) first.focus();
+    }
+
+    function showStudyView() {
+      studyView.style.display = "block";
+      examView.style.display = "none";
+      startExamBtn.style.display = "inline-block";
+      backToStudyBtn.style.display = "none";
+      finishBtn.style.display = "none";
+    }
+
+    function showExamView() {
+      studyView.style.display = "none";
+      examView.style.display = "block";
+      startExamBtn.style.display = "none";
+      backToStudyBtn.style.display = "inline-block";
+      finishBtn.style.display = "inline-block";
+    }
+
+    function gradeExam() {
+	let correct = 0;
+
+	examOrder.forEach((vocabIndex, rowIndex) => {
+	    const item = VOCAB[vocabIndex];
+
+	    const user = document.getElementById(`ans_${rowIndex}`).value;
+	    const resCell = document.getElementById(`res_${rowIndex}`);
+
+	    const ok = normHe(user) === normHe(item.meaning);
+	    if (ok) correct++;
+
+	    resCell.innerHTML = ok
+		? `<span class="pill ok">נכון</span>`
+		: `<span class="pill bad">טעות</span> <span class="muted">הנכון: <b>${escapeHtml(item.meaning)}</b></span>`;
+	});
+
+	scoreLine.innerHTML = `ציון: <b>${correct}</b> מתוך <b>${VOCAB.length}</b>.`;
+    }
+
+    // Events
+    startExamBtn.addEventListener("click", () => {
+      renderExam();
+      showExamView();
+    });
+
+    backToStudyBtn.addEventListener("click", () => {
+      showStudyView();
+    });
+
+    finishBtn.addEventListener("click", () => {
+      gradeExam();
+    });
+
+    // Init
+    renderStudy();
+    showStudyView();
+  </script>
+</body>
+</html>
