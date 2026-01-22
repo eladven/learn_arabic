@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>תרגול קריאה – כתב עברי עתיק</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Arial, sans-serif; margin: 24px; line-height: 1.5; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .card { border: 1px solid #ddd; border-radius: 16px; padding: 18px; margin-bottom: 18px; }
+    .title { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
+    .paleo {
+      font-size: 40px;
+      padding: 14px 12px;
+      border-radius: 12px;
+      background: #fafafa;
+      border: 1px solid #eee;
+      direction: rtl;
+      unicode-bidi: plaintext;
+      letter-spacing: 0.02em;
+      white-space: pre-wrap; /* keep wide word gaps */
+      margin-bottom: 14px;
+    }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    input[type="text"] {
+      flex: 1;
+      min-width: 260px;
+      font-size: 18px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+    }
+    button {
+      font-size: 16px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background: white;
+      cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+    .result { margin-top: 12px; font-size: 18px; }
+    .hint { margin-top: 8px; color: #555; font-size: 14px; }
+    .small { color: #666; font-size: 14px; margin-top: 12px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #e3e3e3; padding: 8px 10px; text-align: center; }
+    th { background: #f6f6f6; font-weight: 700; }
+    .paleoCell { font-size: 22px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="card">
+      <div class="title">תרגול קריאה – כתב עברי עתיק (כתב מלא)</div>
+
+      <div id="paleo" class="paleo"></div>
+
+      <div class="row">
+        <input id="answer" type="text" placeholder="הקלד כאן בעברית מודרנית…" autocomplete="off" />
+        <button id="checkBtn">בדוק</button>
+        <button id="skipBtn" title="דלג למשפט הבא בלי ציון">דלג</button>
+      </div>
+
+      <div id="result" class="result"></div>
+      <div id="details" class="hint"></div>
+
+      <div class="small">
+        טיפים:
+        <span class="mono">Enter</span> = בדיקה · רווחים וניקוד לא משנים · בסוף כל משפט תקבל גם “כמה אותיות נכונות מתוך כמה”.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="title">טבלת השוואה – א״ב מודרני ↔ כתב עברי עתיק (פלאו־עברית)</div>
+      <div id="alphabetTable"></div>
+      <div class="small">
+        הערה: זו התאמה שימושית לתרגול (אות־לאות), לא שחזור קליגרפי של כל תקופה/סופר.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Load sentences from a separate file -->
+  <script src="./sentences.js"></script>
+
+  <script>
+    // ===== Configuration =====
+    // Wide word gap in the paleo string: use EM SPACE (U+2003) twice between words
+    const GAP = "\u2003\u2003";
+
+    // ===== Alphabet mapping (modern -> paleo) =====
+    const ALPHABET = [
+      ["א","𐤀"], ["ב","𐤁"], ["ג","𐤂"], ["ד","𐤃"], ["ה","𐤄"], ["ו","𐤅"],
+      ["ז","𐤆"], ["ח","𐤇"], ["ט","𐤈"], ["י","𐤉"], ["כ","𐤊"], ["ל","𐤋"],
+      ["מ","𐤌"], ["נ","𐤍"], ["ס","𐤎"], ["ע","𐤏"], ["פ","𐤐"], ["צ","𐤑"],
+      ["ק","𐤒"], ["ר","𐤓"], ["ש","𐤔"], ["ת","𐤕"],
+    ];
+
+    const FINAL_FORMS = {
+      "ך":"כ", "ם":"מ", "ן":"נ", "ף":"פ", "ץ":"צ"
+    };
+
+    const MODERN_TO_PALEO = Object.fromEntries(ALPHABET);
+
+    // ===== Helpers =====
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function normalizeHebrew(s) {
+      if (!s) return "";
+      return s
+        .trim()
+        // remove Hebrew diacritics (nikud + cantillation)
+        .replace(/[\u0591-\u05C7]/g, "")
+        // normalize punctuation quotes
+        .replace(/[״”“]/g, '"')
+        .replace(/[׳‘’]/g, "'")
+        // remove punctuation (keep letters and spaces)
+        .replace(/[.,!?;:()\[\]{}"']/g, "")
+        // collapse whitespace
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    // Letter-level score ignoring spaces
+    function letterScore(user, target) {
+      const u = user.replace(/\s+/g, "");
+      const t = target.replace(/\s+/g, "");
+      const n = Math.min(u.length, t.length);
+      let correct = 0;
+      for (let i = 0; i < n; i++) if (u[i] === t[i]) correct++;
+      return { correct, total: t.length, userLen: u.length };
+    }
+
+    // Convert modern Hebrew (full spelling) to paleo letters with WIDE word gaps.
+    // Keeps spaces as wide GAP; ignores punctuation/nikud; maps final letters to base forms.
+    function toPaleoWithWideSpaces(modernSentence) {
+      const normalized = normalizeHebrew(modernSentence);
+      const parts = normalized.split(" ");
+      const paleoWords = parts.map(word => {
+        let out = "";
+        for (const ch of word) {
+          const base = FINAL_FORMS[ch] ?? ch;
+          out += (MODERN_TO_PALEO[base] ?? base); // if unknown, keep as-is
+        }
+        return out;
+      });
+      return paleoWords.join(GAP);
+    }
+
+    // ===== Render alphabet table =====
+    function renderAlphabetTable() {
+      const host = document.getElementById("alphabetTable");
+      let html = "<table><thead><tr><th>מודרני</th><th>עתיק</th><th>מודרני</th><th>עתיק</th><th>מודרני</th><th>עתיק</th></tr></thead><tbody>";
+      // 3 columns of pairs
+      for (let i = 0; i < ALPHABET.length; i += 3) {
+        html += "<tr>";
+        for (let k = 0; k < 3; k++) {
+          const pair = ALPHABET[i + k];
+          if (!pair) {
+            html += "<td></td><td></td>";
+            continue;
+          }
+          html += `<td>${pair[0]}</td><td class="paleoCell">${pair[1]}</td>`;
+        }
+        html += "</tr>";
+      }
+      html += "</tbody></table>";
+      host.innerHTML = html;
+    }
+
+    // ===== Build items from SENTENCES (loaded from sentences.js) =====
+    // Expect SENTENCES to be an array of modern Hebrew sentences (strings).
+    const items = (window.SENTENCES ?? []).map(s => ({
+      modern: s,
+      paleo: toPaleoWithWideSpaces(s),
+    }));
+
+    if (items.length < 150) {
+      console.warn("Expected 150 sentences, got:", items.length);
+    }
+
+    // ===== Trainer state =====
+    let queue = shuffle(items.slice());
+    let current = null;
+
+    const paleoEl = document.getElementById("paleo");
+    const answerEl = document.getElementById("answer");
+    const resultEl = document.getElementById("result");
+    const detailsEl = document.getElementById("details");
+    const checkBtn = document.getElementById("checkBtn");
+    const skipBtn = document.getElementById("skipBtn");
+
+    function nextItem() {
+      if (queue.length === 0) queue = shuffle(items.slice());
+      current = queue.pop();
+
+      paleoEl.textContent = current.paleo;
+      answerEl.value = "";
+      resultEl.textContent = "";
+      detailsEl.textContent = "";
+      answerEl.focus();
+    }
+
+    function checkAnswer() {
+      const userRaw = answerEl.value;
+      const user = normalizeHebrew(userRaw);
+      const target = normalizeHebrew(current.modern);
+
+      const ok = (user === target);
+      const score = letterScore(user, target);
+
+      resultEl.textContent = ok ? "✅ נכון" : "❌ לא נכון";
+      detailsEl.textContent =
+        `ציון אותיות: ${score.correct} מתוך ${score.total} (התשובה שלך: ${score.userLen} אותיות)` +
+        (ok ? "" : ` · התשובה הנכונה: "${current.modern}"`);
+
+      setTimeout(nextItem, 1300);
+    }
+
+    checkBtn.addEventListener("click", checkAnswer);
+
+    skipBtn.addEventListener("click", () => {
+      resultEl.textContent = "↪️ דילגת";
+      detailsEl.textContent = `התשובה הייתה: "${current.modern}"`;
+      setTimeout(nextItem, 800);
+    });
+
+    answerEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        checkAnswer();
+      }
+    });
+
+    // Start
+    renderAlphabetTable();
+    nextItem();
+  </script>
+</body>
+</html>
