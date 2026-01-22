@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ממיר עברית → כתב עברי קדום</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Arial, sans-serif; margin: 24px; line-height: 1.5; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    .card { border: 1px solid #ddd; border-radius: 16px; padding: 18px; }
+    .title { font-size: 20px; font-weight: 800; margin-bottom: 12px; }
+    textarea {
+      width: 100%;
+      height: 220px;
+      font-size: 18px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    .paleo {
+      margin-top: 14px;
+      font-size: 34px;
+      padding: 14px 12px;
+      border-radius: 12px;
+      background: #fafafa;
+      border: 1px solid #eee;
+      direction: rtl;
+      unicode-bidi: plaintext;
+      white-space: pre-wrap;  /* keep line breaks */
+      word-break: break-word;
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      font-size: 16px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      background: white;
+      cursor: pointer;
+    }
+    .small { color: #666; font-size: 14px; margin-top: 10px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="title">ממיר עברית מודרנית → כתב עברי קדום (פלאו־עברית)</div>
+
+      <textarea id="input" placeholder="הקלד כאן בעברית… למשל: השמש עולה בבוקר"></textarea>
+
+      <div class="row">
+        <button id="clearBtn">נקה</button>
+        <button id="copyBtn">העתק כתב קדום</button>
+      </div>
+
+      <div class="small">
+        רווחים בין מילים יוצגו כרווחים גדולים · ניקוד וסימני טעמים יוסרו · אותיות סופיות (ך ם ן ף ץ) יומרו לאות הבסיס.
+      </div>
+
+      <div id="output" class="paleo"></div>
+    </div>
+  </div>
+
+  <script>
+    // Wide word gap: EM SPACE (U+2003) twice
+    const GAP = "\u2003\u2003";
+
+    // Modern -> Paleo-Hebrew mapping (training-friendly)
+    const ALPHABET = {
+      "א":"𐤀","ב":"𐤁","ג":"𐤂","ד":"𐤃","ה":"𐤄","ו":"𐤅",
+      "ז":"𐤆","ח":"𐤇","ט":"𐤈","י":"𐤉","כ":"𐤊","ל":"𐤋",
+      "מ":"𐤌","נ":"𐤍","ס":"𐤎","ע":"𐤏","פ":"𐤐","צ":"𐤑",
+      "ק":"𐤒","ר":"𐤓","ש":"𐤔","ת":"𐤕"
+    };
+
+    const FINAL_FORMS = { "ך":"כ", "ם":"מ", "ן":"נ", "ף":"פ", "ץ":"צ" };
+
+    function normalizeHebrew(s) {
+      if (!s) return "";
+      return s
+        // remove Hebrew diacritics (nikud + cantillation)
+        .replace(/[\u0591-\u05C7]/g, "")
+        // normalize quotes
+        .replace(/[״”“]/g, '"')
+        .replace(/[׳‘’]/g, "'")
+        // keep punctuation for display spacing, but we won't convert it to paleo
+        ;
+    }
+
+    function toPaleo(text) {
+      const s = normalizeHebrew(text);
+
+      // Split by spaces but keep newlines; handle each line separately
+      const lines = s.split(/\n/);
+
+      const outLines = lines.map(line => {
+        // collapse multiple spaces inside a line to single spaces (optional)
+        const cleaned = line.replace(/\s+/g, " ").trim();
+
+        if (!cleaned) return "";
+
+        const words = cleaned.split(" ");
+        const paleoWords = words.map(word => {
+          let out = "";
+          for (const ch of word) {
+            const base = FINAL_FORMS[ch] ?? ch;
+
+            if (ALPHABET[base]) out += ALPHABET[base];
+            else {
+              // keep characters that are not Hebrew letters (like , . ? ! - :)
+              out += ch;
+            }
+          }
+          return out;
+        });
+
+        return paleoWords.join(GAP);
+      });
+
+      return outLines.join("\n");
+    }
+
+    const inputEl = document.getElementById("input");
+    const outputEl = document.getElementById("output");
+    const clearBtn = document.getElementById("clearBtn");
+    const copyBtn = document.getElementById("copyBtn");
+
+    function render() {
+      const val = inputEl.value || "";
+      outputEl.textContent = toPaleo(val);
+    }
+
+    inputEl.addEventListener("input", render);
+
+    clearBtn.addEventListener("click", () => {
+      inputEl.value = "";
+      render();
+      inputEl.focus();
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(outputEl.textContent || "");
+        copyBtn.textContent = "הועתק ✅";
+        setTimeout(() => (copyBtn.textContent = "העתק כתב קדום"), 900);
+      } catch (e) {
+        copyBtn.textContent = "לא הצלחתי להעתיק ❌";
+        setTimeout(() => (copyBtn.textContent = "העתק כתב קדום"), 1200);
+      }
+    });
+
+    // initial render with placeholder example
+    inputEl.value = "השמש עולה בבוקר\nהנער עובד בשדה";
+    render();
+  </script>
+</body>
+</html>
